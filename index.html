@@ -230,7 +230,7 @@
     const SUPABASE_URL = "https://gxnsutmyudmbqwvgvwuj.supabase.co/rest/v1/";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4bnN1dG15dWRtYnF3dmd2d3VqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4ODM3MjYsImV4cCI6MjEwMTQ1OTcyNn0.OOSpAzEtLWwg_1V5C8K1m6MoLxhAHts1LcxcfCCx9As";
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let dbSurat = [];
     let suratChart = null;
@@ -276,7 +276,7 @@
     // 1. Muat Data dari Supabase
     async function muatDataSurat() {
         showLoading(true, "Memuat Data Arsip...");
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('surat')
             .select('*')
             .order('created_at', { ascending: false });
@@ -305,7 +305,7 @@
             const file = fileInput.files[0];
             const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
 
-            const { data: uploadData, error: uploadError } = await supabase.storage
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage
                 .from('dokumen-surat')
                 .upload(fileName, file);
 
@@ -315,14 +315,14 @@
                 return;
             }
 
-            const { data: urlData } = supabase.storage
+            const { data: urlData } = supabaseClient.storage
                 .from('dokumen-surat')
                 .getPublicUrl(fileName);
 
             fileUrl = urlData.publicUrl;
         }
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseClient
             .from('surat')
             .insert([{
                 jenis_surat: document.getElementById('jenisSurat').value,
@@ -347,7 +347,7 @@
     async function hapusSurat(id) {
         if (confirm("Apakah Anda yakin ingin menghapus arsip surat ini?")) {
             showLoading(true, "Menghapus Data...");
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('surat')
                 .delete()
                 .eq('id', id);
@@ -467,7 +467,7 @@
                     file_url: "#"
                 }));
 
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('surat')
                     .insert(dataSiapInsert);
 
@@ -563,7 +563,7 @@
 
     // 7. Setup Real-time Listener Supabase
     function setupRealtime() {
-        supabase
+        supabaseClient
             .channel('schema-db-changes')
             .on(
                 'postgres_changes',
