@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Repository Surat Digital - Supabase & Excel Integration</title>
+    <title>Repository Surat Digital - Supabase Edition</title>
     <!-- Chart.js, Supabase SDK & SheetJS (XLSX) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -114,6 +114,8 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center; color: white; font-size: 18px;
         }
+
+        .hint-text { font-size: 11px; color: #777; margin-top: 3px; display: block; }
     </style>
 </head>
 <body>
@@ -130,9 +132,9 @@
     <!-- DASHBOARD STATISTIK -->
     <div class="dashboard-grid">
         <div class="card">
-            <h2>Integrasi & Fitur Excel</h2>
+            <h2>Format Penomoran Surat</h2>
             <p style="font-size: 12px; color: #666; line-height: 1.5;">
-                Anda dapat mengunduh seluruh rekapitulasi surat ke file Excel (`.xlsx`) atau mengunggah data surat dalam jumlah banyak sekaligus menggunakan fitur Import Excel.
+                Penomoran surat saat ini disesuaikan dengan standar organisasi: <strong>V-114/LKI/VIII-2026</strong>. Nomor urut akan merekomendasikan angka berikutnya secara otomatis.
             </p>
         </div>
 
@@ -158,7 +160,8 @@
                 </div>
                 <div class="form-group">
                     <label>Nomor Surat</label>
-                    <input type="text" id="noSurat" required placeholder="Contoh: 045/SK/HRD/2026">
+                    <input type="text" id="noSurat" required placeholder="Contoh: V-114/LKI/VIII-2026">
+                    <span class="hint-text">Format standar: V-[Nomor]/LKI/VIII-2026</span>
                 </div>
                 <div class="form-group">
                     <label>Tanggal Surat</label>
@@ -200,7 +203,6 @@
                 <button class="btn-excel-import" onclick="document.getElementById('excelFileInput').click()">📤 Import dari Excel</button>
                 <button class="btn-template" onclick="downloadTemplateExcel()">📄 Download Format Import</button>
                 
-                <!-- Input hidden untuk pilih file excel -->
                 <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="importDariExcel(event)">
             </div>
 
@@ -239,6 +241,38 @@
         el.style.display = show ? 'flex' : 'none';
     }
 
+    // Generator Nomor Surat Otomatis Berdasarkan Urutan Terakhir
+    function generateNomorSuratBerikutnya() {
+        if (!dbSurat || dbSurat.length === 0) {
+            return "V-114/LKI/VIII-2026";
+        }
+
+        // Cari nomor surat dengan pola V-xxx/LKI/...
+        let maxNumber = 113; // default sebelum 114
+        
+        dbSurat.forEach(s => {
+            const match = s.no_surat ? s.no_surat.match(/V-(\d+)\/LKI/i) : null;
+            if (match && match[1]) {
+                const num = parseInt(match[1], 10);
+                if (num > maxNumber) {
+                    maxNumber = num;
+                }
+            }
+        });
+
+        const nextNum = maxNumber + 1;
+        return `V-${nextNum}/LKI/VIII-2026`;
+    }
+
+    function setInitialFormValues() {
+        // Set tanggal default ke hari ini
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('tglSurat').value = today;
+
+        // Set rekomendasi nomor surat otomatis
+        document.getElementById('noSurat').value = generateNomorSuratBerikutnya();
+    }
+
     // 1. Muat Data dari Supabase
     async function muatDataSurat() {
         showLoading(true, "Memuat Data Arsip...");
@@ -254,6 +288,7 @@
             dbSurat = data;
             renderTabel(dbSurat);
             updateChart();
+            setInitialFormValues();
         }
         showLoading(false);
     }
@@ -337,7 +372,6 @@
             return;
         }
 
-        // Format data agar rapi di Excel
         const dataExcel = dbSurat.map((item, index) => ({
             "No": index + 1,
             "Jenis Surat": item.jenis_surat,
@@ -353,7 +387,6 @@
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Arsip Surat");
 
-        // Set Lebar Kolom Otomatis
         worksheet['!cols'] = [
             { wch: 5 },  // No
             { wch: 15 }, // Jenis Surat
@@ -365,7 +398,6 @@
             { wch: 40 }  // Link Dokumen
         ];
 
-        // Download File Excel
         const tanggalHeader = new Date().toISOString().split('T')[0];
         XLSX.writeFile(workbook, `Rekap_Repository_Surat_${tanggalHeader}.xlsx`);
     }
@@ -375,16 +407,16 @@
         const templateData = [
             {
                 "Jenis Surat": "Surat Masuk",
-                "No. Surat": "001/M/KED/2026",
-                "Tanggal Surat": "2026-08-01",
+                "No. Surat": "V-114/LKI/VIII-2026",
+                "Tanggal Surat": "2026-08-05",
                 "Pengirim / Tujuan": "Dinas Pendidikan",
                 "Perihal": "Undangan Rapat Koordinasi",
                 "Kategori": "Kedinasan / Resmi"
             },
             {
                 "Jenis Surat": "Surat Keluar",
-                "No. Surat": "002/SK/HRD/2026",
-                "Tanggal Surat": "2026-08-02",
+                "No. Surat": "V-115/LKI/VIII-2026",
+                "Tanggal Surat": "2026-08-06",
                 "Pengirim / Tujuan": "PT. Vendor Utama",
                 "Perihal": "Pengajuan Kerjasama Ops",
                 "Kategori": "Kerjasama / MoU"
@@ -399,7 +431,7 @@
             { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 40 }, { wch: 20 }
         ];
 
-        XLSX.writeFile(workbook, "Template_Import_Surat.xlsx");
+        XLSX.writeFile(workbook, "Template_Import_Surat_LKI.xlsx");
     }
 
     // C. Import Data dari Excel ke Supabase Database
@@ -417,7 +449,6 @@
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Konversi isi Excel ke JSON
                 const rows = XLSX.utils.sheet_to_json(worksheet);
 
                 if (rows.length === 0) {
@@ -426,10 +457,9 @@
                     return;
                 }
 
-                // Format data untuk dimasukkan ke Supabase
                 const dataSiapInsert = rows.map(row => ({
                     jenis_surat: row["Jenis Surat"] || "Surat Masuk",
-                    no_surat: row["No. Surat"] || "-",
+                    no_surat: row["No. Surat"] || "V-114/LKI/VIII-2026",
                     tgl_surat: row["Tanggal Surat"] || new Date().toISOString().split('T')[0],
                     pihak_terkait: row["Pengirim / Tujuan"] || "-",
                     perihal: row["Perihal"] || "-",
@@ -437,7 +467,6 @@
                     file_url: "#"
                 }));
 
-                // Bulk Insert ke Supabase
                 const { error } = await supabase
                     .from('surat')
                     .insert(dataSiapInsert);
@@ -452,7 +481,6 @@
                 console.error(err);
                 alert("Terjadi kesalahan saat memproses file Excel.");
             } finally {
-                // Reset input file
                 document.getElementById('excelFileInput').value = "";
                 showLoading(false);
             }
