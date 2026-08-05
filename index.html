@@ -563,17 +563,7 @@
 
     // 7. Setup Real-time Listener Supabase
     function setupRealtime() {
-        supabaseClient
-            .channel('schema-db-changes')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'surat' },
-                (payload) => {
-                    console.log('Perubahan data terdeteksi:', payload);
-                    muatDataSurat();
-                }
-            )
-            .subscribe();
+        // Realtime disabled temporary for debugging
     }
 
     // Jalankan Pertama Kali
